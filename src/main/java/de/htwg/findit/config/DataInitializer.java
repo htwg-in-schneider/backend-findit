@@ -107,6 +107,8 @@ public class DataInitializer {
                     ItemType.FOUND,
                     "Elektronik",
                     "Bibliothek",
+                    47.66772,
+                    9.17105,
                     today.minusDays(2),
                     ItemStatus.OPEN,
                     dennis
@@ -119,6 +121,8 @@ public class DataInitializer {
                     ItemType.LOST,
                     "Elektronik",
                     "Bibliothek",
+                    47.66772,
+                    9.17105,
                     today.minusDays(1),
                     ItemStatus.IN_PROGRESS,
                     max
@@ -131,6 +135,8 @@ public class DataInitializer {
                     ItemType.FOUND,
                     "Dokumente",
                     "Mensa",
+                    47.66718,
+                    9.17178,
                     today.minusDays(3),
                     ItemStatus.OPEN,
                     max
@@ -143,6 +149,8 @@ public class DataInitializer {
                     ItemType.LOST,
                     "Dokumente",
                     "Mensa",
+                    47.66718,
+                    9.17178,
                     today.minusDays(2),
                     ItemStatus.OPEN,
                     dennis
@@ -155,6 +163,8 @@ public class DataInitializer {
                     ItemType.FOUND,
                     "Schlüssel",
                     "Gebäude F",
+                    47.66718,
+                    9.17242,
                     today.minusDays(5),
                     ItemStatus.OPEN,
                     dennis
@@ -167,6 +177,8 @@ public class DataInitializer {
                     ItemType.LOST,
                     "Schlüssel",
                     "Gebäude F",
+                    47.66718,
+                    9.17242,
                     today.minusDays(4),
                     ItemStatus.IN_PROGRESS,
                     max
@@ -179,6 +191,8 @@ public class DataInitializer {
                     ItemType.LOST,
                     "Tasche",
                     "Bibliothek",
+                    47.66772,
+                    9.17105,
                     today.minusDays(7),
                     ItemStatus.OPEN,
                     max
@@ -191,6 +205,8 @@ public class DataInitializer {
                     ItemType.FOUND,
                     "Sonstiges",
                     "Sporthalle",
+                    47.66693,
+                    9.17205,
                     today.minusDays(6),
                     ItemStatus.RETURNED,
                     dennis
@@ -286,6 +302,8 @@ public class DataInitializer {
             ItemType type,
             String category,
             String location,
+            Double latitude,
+            Double longitude,
             LocalDate date,
             ItemStatus status,
             User user
@@ -296,6 +314,8 @@ public class DataInitializer {
                 type,
                 category,
                 location,
+                latitude,
+                longitude,
                 date,
                 status,
                 user

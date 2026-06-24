@@ -1,14 +1,12 @@
 package de.htwg.findit.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "item")
 public class Item {
 
     public enum ItemType {
@@ -51,6 +49,16 @@ public class Item {
     @Column(nullable = false, length = 120)
     private String location;
 
+    @DecimalMin(value = "-90.0")
+    @DecimalMax(value = "90.0")
+    @Column
+    private Double latitude;
+
+    @DecimalMin(value = "-180.0")
+    @DecimalMax(value = "180.0")
+    @Column
+    private Double longitude;
+
     @NotNull
     @PastOrPresent
     @Column(nullable = false)
@@ -62,7 +70,7 @@ public class Item {
     private ItemStatus status = ItemStatus.OPEN;
 
     @NotNull
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -75,6 +83,8 @@ public class Item {
             ItemType type,
             String category,
             String location,
+            Double latitude,
+            Double longitude,
             LocalDate date,
             ItemStatus status,
             User user
@@ -84,6 +94,8 @@ public class Item {
         this.type = type;
         this.category = category;
         this.location = location;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.date = date;
         this.status = status == null ? ItemStatus.OPEN : status;
         this.user = user;
@@ -111,6 +123,14 @@ public class Item {
 
     public String getLocation() {
         return location;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
     }
 
     public LocalDate getDate() {
@@ -147,6 +167,14 @@ public class Item {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public void setDate(LocalDate date) {
