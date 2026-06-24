@@ -1,10 +1,25 @@
 HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-### STS ###
+# Build output
+target/
+build/
+out/
+dist/
+*.log
+
+# Maven wrapper binary cache
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Accidentally copied frontend/dependencies
+frontend-findit/
+node_modules/
+
+# STS
 .apt_generated
 .classpath
 .factorypath
@@ -13,21 +28,21 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
+# VS Code
 .vscode/
+
+# OS
+.DS_Store
+Thumbs.db

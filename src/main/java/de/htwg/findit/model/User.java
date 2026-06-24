@@ -2,6 +2,10 @@ package de.htwg.findit.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,11 +17,19 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
+    @Size(max = 100)
+    @Column(nullable = false, length = 100)
     private String name;
+
+    @NotBlank
+    @Email
+    @Size(max = 160)
+    @Column(nullable = false, unique = true, length = 160)
     private String email;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user")
     private List<Item> items = new ArrayList<>();
 
     public User() {
