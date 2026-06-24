@@ -63,23 +63,30 @@ public class CurrentUserService {
 
         String email = readEmail(jwt);
 
-        if (email != null && !email.isBlank()) {
-            Optional<User> userByEmail = userRepository.findByEmailIgnoreCase(email);
-
-            if (userByEmail.isPresent()) {
-                User user = userByEmail.get();
-                user.setAuthSubject(subject);
-
-                user = updateRoleFromTokenIfNeeded(user, jwt);
-
-                return userRepository.save(user);
-            }
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Das Token enthält keine E-Mail-Adresse."
+            );
         }
 
-        throw new ResponseStatusException(
-                HttpStatus.FORBIDDEN,
-                "Für diesen Auth0-Nutzer existiert kein findIT-Nutzer."
+        Optional<User> userByEmail = userRepository.findByEmailIgnoreCase(email);
+
+        if (userByEmail.isPresent()) {
+            User user = userByEmail.get();
+            user.setAuthSubject(subject);
+            user = updateRoleFromTokenIfNeeded(user, jwt);
+            return userRepository.save(user);
+        }
+
+        User newUser = new User(
+                readDisplayName(jwt, email),
+                email.trim().toLowerCase(),
+                subject,
+                tokenContainsAdminRole(jwt) ? UserRole.ADMIN : UserRole.USER
         );
+
+        return userRepository.save(newUser);
     }
 
     public boolean isAdmin(Jwt jwt) {
@@ -161,7 +168,32 @@ public class CurrentUserService {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
+    private String readDisplayName(Jwt jwt, String email) {
+        String name = jwt.getClaimAsString("name");
+
+        if (name != null && !name.isBlank()) {
+            return name.trim();
+        }
+
+        String nickname = jwt.getClaimAsString("nickname");
+
+        if (nickname != null && !nickname.isBlank()) {
+            return nickname.trim();
+        }
+
+        String localPart = email.split("@")[0]
+                .replace(".", " ")
+                .replace("_", " ")
+                .replace("-", " ")
+                .trim();
+
+        if (localPart.isBlank()) {
+            return "findIT Nutzer";
+        }
+
+        return Character.toUpperCase(localPart.charAt(0)) + localPart.substring(1);
+    }
+
     private List<String> readStringListClaim(Jwt jwt, String claimName) {
         Object claim = jwt.getClaim(claimName);
 
