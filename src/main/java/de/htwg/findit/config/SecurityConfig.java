@@ -31,7 +31,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/items", "/api/items/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/items").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contact-requests").permitAll()
 
@@ -42,13 +43,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/items/**").authenticated()
 
                         .requestMatchers("/api/users/**").authenticated()
+
                         .requestMatchers(HttpMethod.POST, "/api/categories").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/contact-requests/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/contact-requests/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/contact-requests/**").authenticated()
 
-                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
