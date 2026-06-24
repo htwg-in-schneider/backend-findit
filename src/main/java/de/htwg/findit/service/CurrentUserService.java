@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -18,6 +19,9 @@ public class CurrentUserService {
 
     @Value("${app.security.enabled:false}")
     private boolean securityEnabled;
+
+    @Value("${app.auth.claim-namespace:https://findit.htwg-konstanz.de/}")
+    private String claimNamespace;
 
     public CurrentUserService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -54,7 +58,7 @@ public class CurrentUserService {
         Optional<User> userBySubject = userRepository.findByAuthSubject(subject);
 
         if (userBySubject.isPresent()) {
-            return userBySubject.get();
+            return updateRoleFromTokenIfNeeded(userBySubject.get(), jwt);
         }
 
         String email = readEmail(jwt);
@@ -65,6 +69,9 @@ public class CurrentUserService {
             if (userByEmail.isPresent()) {
                 User user = userByEmail.get();
                 user.setAuthSubject(subject);
+
+                user = updateRoleFromTokenIfNeeded(user, jwt);
+
                 return userRepository.save(user);
             }
         }
@@ -80,7 +87,9 @@ public class CurrentUserService {
             return true;
         }
 
-        return getRequiredUser(jwt).getRole() == UserRole.ADMIN;
+        User currentUser = getRequiredUser(jwt);
+
+        return currentUser.getRole() == UserRole.ADMIN || tokenContainsAdminRole(jwt);
     }
 
     public void requireAdmin(Jwt jwt) {
@@ -104,6 +113,7 @@ public class CurrentUserService {
         User currentUser = getRequiredUser(jwt);
 
         return currentUser.getRole() == UserRole.ADMIN
+                || tokenContainsAdminRole(jwt)
                 || currentUser.getId().equals(ownerUserId);
     }
 
@@ -116,19 +126,64 @@ public class CurrentUserService {
         }
     }
 
+    private User updateRoleFromTokenIfNeeded(User user, Jwt jwt) {
+        if (tokenContainsAdminRole(jwt) && user.getRole() != UserRole.ADMIN) {
+            user.setRole(UserRole.ADMIN);
+            return userRepository.save(user);
+        }
+
+        return user;
+    }
+
+    private boolean tokenContainsAdminRole(Jwt jwt) {
+        List<String> roles = readStringListClaim(jwt, namespacedClaim("roles"));
+
+        return roles.stream().anyMatch(role ->
+                role.equalsIgnoreCase("ADMIN")
+                        || role.equalsIgnoreCase("Admin")
+                        || role.equalsIgnoreCase("findIT Admin")
+        );
+    }
+
     private String readEmail(Jwt jwt) {
-        String email = jwt.getClaimAsString("email");
+        String email = jwt.getClaimAsString(namespacedClaim("email"));
 
         if (email != null && !email.isBlank()) {
             return email;
         }
 
-        email = jwt.getClaimAsString("https://findit.example.com/email");
+        email = jwt.getClaimAsString("email");
 
         if (email != null && !email.isBlank()) {
             return email;
         }
 
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> readStringListClaim(Jwt jwt, String claimName) {
+        Object claim = jwt.getClaim(claimName);
+
+        if (claim instanceof List<?> list) {
+            return list.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .toList();
+        }
+
+        return List.of();
+    }
+
+    private String namespacedClaim(String claimName) {
+        String namespace = claimNamespace == null || claimNamespace.isBlank()
+                ? "https://findit.htwg-konstanz.de/"
+                : claimNamespace;
+
+        if (!namespace.endsWith("/")) {
+            namespace = namespace + "/";
+        }
+
+        return namespace + claimName;
     }
 }
