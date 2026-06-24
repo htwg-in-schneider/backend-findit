@@ -13,6 +13,11 @@ import java.util.List;
 @Table(name = "app_user")
 public class User {
 
+    public enum UserRole {
+        USER,
+        ADMIN
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,6 +33,14 @@ public class User {
     @Column(nullable = false, unique = true, length = 160)
     private String email;
 
+    @Size(max = 240)
+    @Column(unique = true, length = 240)
+    private String authSubject;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role = UserRole.USER;
+
     @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Item> items = new ArrayList<>();
@@ -38,6 +51,14 @@ public class User {
     public User(String name, String email) {
         this.name = name;
         this.email = email;
+        this.role = UserRole.USER;
+    }
+
+    public User(String name, String email, String authSubject, UserRole role) {
+        this.name = name;
+        this.email = email;
+        this.authSubject = authSubject;
+        this.role = role == null ? UserRole.USER : role;
     }
 
     public Long getId() {
@@ -50,6 +71,14 @@ public class User {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getAuthSubject() {
+        return authSubject;
+    }
+
+    public UserRole getRole() {
+        return role;
     }
 
     public List<Item> getItems() {
@@ -66,6 +95,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void setAuthSubject(String authSubject) {
+        this.authSubject = authSubject;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role == null ? UserRole.USER : role;
     }
 
     public void setItems(List<Item> items) {

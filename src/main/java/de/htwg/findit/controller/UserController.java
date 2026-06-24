@@ -3,11 +3,14 @@ package de.htwg.findit.controller;
 import de.htwg.findit.model.User;
 import de.htwg.findit.repository.ItemRepository;
 import de.htwg.findit.repository.UserRepository;
+import de.htwg.findit.service.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,14 +24,22 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
+    private final CurrentUserService currentUserService;
 
-    public UserController(UserRepository userRepository, ItemRepository itemRepository) {
+    public UserController(
+            UserRepository userRepository,
+            ItemRepository itemRepository,
+            CurrentUserService currentUserService
+    ) {
         this.userRepository = userRepository;
         this.itemRepository = itemRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<User> getAllUsers(@AuthenticationPrincipal Jwt jwt) {
+        currentUserService.requireAdmin(jwt);
+
         return userRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(User::getId))
@@ -36,7 +47,12 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
+    public User getUserById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -46,7 +62,12 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public User createUser(@RequestBody @Valid UserRequest request) {
+    public User createUser(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody @Valid UserRequest request
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         String cleanedName = request.name().trim();
         String cleanedEmail = request.email().trim().toLowerCase();
 
@@ -63,7 +84,13 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody @Valid UserRequest request) {
+    public User updateUser(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id,
+            @RequestBody @Valid UserRequest request
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -90,7 +117,12 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUser(@PathVariable Long id) {
+    public void deleteUser(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,

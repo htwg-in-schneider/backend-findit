@@ -9,5 +9,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmailIgnoreCase(String email);
 
+    Optional<User> findByAuthSubject(String authSubject);
+
     boolean existsByEmailIgnoreCase(String email);
 }

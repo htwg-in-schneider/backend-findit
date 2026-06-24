@@ -5,11 +5,14 @@ import de.htwg.findit.model.ContactRequest.ContactRequestStatus;
 import de.htwg.findit.model.Item;
 import de.htwg.findit.repository.ContactRequestRepository;
 import de.htwg.findit.repository.ItemRepository;
+import de.htwg.findit.service.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -22,17 +25,22 @@ public class ContactRequestController {
 
     private final ContactRequestRepository contactRequestRepository;
     private final ItemRepository itemRepository;
+    private final CurrentUserService currentUserService;
 
     public ContactRequestController(
             ContactRequestRepository contactRequestRepository,
-            ItemRepository itemRepository
+            ItemRepository itemRepository,
+            CurrentUserService currentUserService
     ) {
         this.contactRequestRepository = contactRequestRepository;
         this.itemRepository = itemRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
-    public List<ContactRequest> getAllContactRequests() {
+    public List<ContactRequest> getAllContactRequests(@AuthenticationPrincipal Jwt jwt) {
+        currentUserService.requireAdmin(jwt);
+
         return contactRequestRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(ContactRequest::getCreatedAt).reversed())
@@ -40,7 +48,12 @@ public class ContactRequestController {
     }
 
     @GetMapping("/item/{itemId}")
-    public List<ContactRequest> getContactRequestsByItem(@PathVariable Long itemId) {
+    public List<ContactRequest> getContactRequestsByItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long itemId
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         return contactRequestRepository.findByItemIdOrderByCreatedAtDesc(itemId);
     }
 
@@ -70,9 +83,12 @@ public class ContactRequestController {
 
     @PutMapping("/{id}/status")
     public ContactRequest updateStatus(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
             @RequestParam ContactRequestStatus status
     ) {
+        currentUserService.requireAdmin(jwt);
+
         ContactRequest contactRequest = contactRequestRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,

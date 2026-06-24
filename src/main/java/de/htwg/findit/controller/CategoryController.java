@@ -2,9 +2,12 @@ package de.htwg.findit.controller;
 
 import de.htwg.findit.model.Category;
 import de.htwg.findit.repository.CategoryRepository;
+import de.htwg.findit.service.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -17,9 +20,14 @@ import java.util.Optional;
 public class CategoryController {
 
     private final CategoryRepository categoryRepository;
+    private final CurrentUserService currentUserService;
 
-    public CategoryController(CategoryRepository categoryRepository) {
+    public CategoryController(
+            CategoryRepository categoryRepository,
+            CurrentUserService currentUserService
+    ) {
         this.categoryRepository = categoryRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
@@ -32,7 +40,12 @@ public class CategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Category createCategory(@RequestBody @Valid CategoryRequest request) {
+    public Category createCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody @Valid CategoryRequest request
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         String cleanedName = request.name().trim();
         String cleanedDescription = request.description() == null
                 ? ""
@@ -52,9 +65,12 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     public Category updateCategory(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long id,
             @RequestBody @Valid CategoryRequest request
     ) {
+        currentUserService.requireAdmin(jwt);
+
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -84,7 +100,12 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteCategory(@PathVariable Long id) {
+    public void deleteCategory(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        currentUserService.requireAdmin(jwt);
+
         if (!categoryRepository.existsById(id)) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,

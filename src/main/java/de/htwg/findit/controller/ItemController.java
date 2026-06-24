@@ -4,14 +4,18 @@ import de.htwg.findit.model.Item;
 import de.htwg.findit.model.Item.ItemStatus;
 import de.htwg.findit.model.Item.ItemType;
 import de.htwg.findit.model.User;
+import de.htwg.findit.model.User.UserRole;
 import de.htwg.findit.repository.ItemRepository;
 import de.htwg.findit.repository.UserRepository;
+import de.htwg.findit.service.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,10 +30,16 @@ public class ItemController {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
-    public ItemController(ItemRepository itemRepository, UserRepository userRepository) {
+    public ItemController(
+            ItemRepository itemRepository,
+            UserRepository userRepository,
+            CurrentUserService currentUserService
+    ) {
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
     }
 
     @GetMapping
@@ -71,12 +81,11 @@ public class ItemController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Item createItem(@RequestBody @Valid ItemRequest request) {
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Nutzer wurde nicht gefunden."
-                ));
+    public Item createItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody @Valid ItemRequest request
+    ) {
+        User user = resolveRequestedUser(jwt, request.userId());
 
         Item item = new Item(
                 request.title().trim(),
@@ -93,18 +102,20 @@ public class ItemController {
     }
 
     @PutMapping("/{id}")
-    public Item updateItem(@PathVariable Long id, @RequestBody @Valid ItemRequest request) {
+    public Item updateItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id,
+            @RequestBody @Valid ItemRequest request
+    ) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Eintrag wurde nicht gefunden."
                 ));
 
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Nutzer wurde nicht gefunden."
-                ));
+        currentUserService.requireOwnerOrAdmin(jwt, item.getUser().getId());
+
+        User user = resolveRequestedUser(jwt, request.userId());
 
         item.setTitle(request.title().trim());
         item.setDescription(request.description().trim());
@@ -119,12 +130,17 @@ public class ItemController {
     }
 
     @PutMapping("/{id}/return")
-    public Item confirmReturn(@PathVariable Long id) {
+    public Item confirmReturn(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Eintrag wurde nicht gefunden."
                 ));
+
+        currentUserService.requireOwnerOrAdmin(jwt, item.getUser().getId());
 
         item.setStatus(ItemStatus.RETURNED);
 
@@ -133,15 +149,19 @@ public class ItemController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteItem(@PathVariable Long id) {
-        if (!itemRepository.existsById(id)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Eintrag wurde nicht gefunden."
-            );
-        }
+    public void deleteItem(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long id
+    ) {
+        Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Eintrag wurde nicht gefunden."
+                ));
 
-        itemRepository.deleteById(id);
+        currentUserService.requireOwnerOrAdmin(jwt, item.getUser().getId());
+
+        itemRepository.delete(item);
     }
 
     @GetMapping("/search")
@@ -166,6 +186,28 @@ public class ItemController {
                         || item.getCategory().equalsIgnoreCase(category))
                 .filter(item -> status == null || item.getStatus() == status)
                 .toList();
+    }
+
+    private User resolveRequestedUser(Jwt jwt, Long requestedUserId) {
+        if (!currentUserService.isSecurityEnabled()) {
+            return userRepository.findById(requestedUserId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Nutzer wurde nicht gefunden."
+                    ));
+        }
+
+        User currentUser = currentUserService.getRequiredUser(jwt);
+
+        if (currentUser.getRole() == UserRole.ADMIN) {
+            return userRepository.findById(requestedUserId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Nutzer wurde nicht gefunden."
+                    ));
+        }
+
+        return currentUser;
     }
 
     private int calculateMatchScore(Item baseItem, Item candidate) {
