@@ -41,6 +41,9 @@ public class User {
     @Column(nullable = false)
     private UserRole role = UserRole.USER;
 
+    @Column(nullable = false, length = 20)
+    private String displayColor = "#2563eb";
+
     @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Item> items = new ArrayList<>();
@@ -52,6 +55,7 @@ public class User {
         this.name = name;
         this.email = email;
         this.role = UserRole.USER;
+        this.displayColor = "#2563eb";
     }
 
     public User(String name, String email, String authSubject, UserRole role) {
@@ -59,6 +63,7 @@ public class User {
         this.email = email;
         this.authSubject = authSubject;
         this.role = role == null ? UserRole.USER : role;
+        this.displayColor = "#2563eb";
     }
 
     public Long getId() {
@@ -79,6 +84,10 @@ public class User {
 
     public UserRole getRole() {
         return role;
+    }
+
+    public String getDisplayColor() {
+        return displayColor;
     }
 
     public List<Item> getItems() {
@@ -103,6 +112,12 @@ public class User {
 
     public void setRole(UserRole role) {
         this.role = role == null ? UserRole.USER : role;
+    }
+
+    public void setDisplayColor(String displayColor) {
+        this.displayColor = displayColor == null || displayColor.isBlank()
+                ? "#2563eb"
+                : displayColor;
     }
 
     public void setItems(List<Item> items) {
